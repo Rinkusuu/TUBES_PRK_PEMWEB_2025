@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'siswa') {
 $user_id = $_SESSION['user_id'];
 $user_kelas = isset($_SESSION['kelas']) ? intval($_SESSION['kelas']) : null;
 
-// dapatkan nama kelas untuk ditampilkan (fallback ke nilai session bila bukan id)
+
 $nama_kelas_display = '—';
 if (!empty($_SESSION['kelas'])) {
     $sess_kelas = $_SESSION['kelas'];
@@ -21,23 +21,21 @@ if (!empty($_SESSION['kelas'])) {
             $nama_kelas_display = $row['nama'];
         }
     } else {
-        // jika di session sudah berupa nama kelas langsung (mis. "XII IPA 1")
+       
         $nama_kelas_display = $sess_kelas;
     }
 
-    // tambahkan prefix 'Kelas ' jika belum ada
     if (stripos($nama_kelas_display, 'kelas') === false) {
         $nama_kelas_display = 'Kelas ' . $nama_kelas_display;
     }
 }
 
-// cari nama kolom kelas yang valid (coba beberapa kemungkinan)
-// candidates bisa disesuaikan jika DB Anda pakai nama lain
+
 $candidates = ['kelas', 'kelas_id', 'id_kelas'];
 $found_col = null;
 $found_prefix = null;
 
-// cek pada tabel mata_pelajaran
+
 $res = mysqli_query($conn, "SHOW COLUMNS FROM mata_pelajaran");
 if ($res) {
     while ($row = mysqli_fetch_assoc($res)) {
@@ -49,7 +47,7 @@ if ($res) {
     }
 }
 
-// jika tidak ada di mata_pelajaran, cek di tabel ujian
+
 if (!$found_col) {
     $res2 = mysqli_query($conn, "SHOW COLUMNS FROM ujian");
     if ($res2) {
@@ -63,14 +61,13 @@ if (!$found_col) {
     }
 }
 
-// jika tidak ditemukan, kita tidak pakai filter kelas
 if (is_null($user_kelas) || !$found_col) {
     $kelas_where = "";
 } else {
     $kelas_where = " WHERE $found_prefix.$found_col = $user_kelas ";
 }
 
-// Stats
+
 $stats = mysqli_fetch_assoc(mysqli_query($conn, "SELECT 
     COUNT(DISTINCT ujian_id) as ujian_selesai,
     IFNULL(AVG(max_skor), 0) as rata_rata,
@@ -79,7 +76,7 @@ FROM (SELECT ujian_id, MAX(skor) as max_skor FROM riwayat_ujian WHERE user_id = 
 
 $ujian_tersedia = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM ujian u JOIN mata_pelajaran mp ON u.mata_pelajaran_id = mp.id $kelas_where"))['total'];
 
-// Pagination
+
 $per_page = 6;
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $offset = ($page - 1) * $per_page;
@@ -149,7 +146,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
         
         .layout { display: flex; min-height: 100vh; }
         
-        /* Sidebar */
+      
         .sidebar {
             width: 280px;
             background: var(--bg-secondary);
@@ -248,7 +245,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
         .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
         .nav-item.active { background: var(--gradient); color: #fff; }
         
-        /* Theme Toggle */
+       
         .theme-toggle {
             display: flex;
             align-items: center;
@@ -289,7 +286,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
         
         .toggle-switch.active::after { transform: translateX(24px); }
         
-        /* Main */
+     
         .main {
             flex: 1;
             margin-left: 280px;
@@ -302,8 +299,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
         .header h1 { font-size: 1.75rem; font-weight: 800; }
         .header p { color: var(--text-secondary); margin-top: 0.25rem; }
-        
-        /* Stats Section */
+      
         .stats-section {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -355,7 +351,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
         .stat-value { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }
         .stat-label { font-size: 0.8rem; color: var(--text-secondary); }
         
-        /* Filter Section */
+      
         .filter-section {
             display: flex;
             align-items: center;
@@ -396,7 +392,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
         
         .filter-select:focus { outline: none; border-color: var(--accent); }
         
-        /* Exam Grid */
+       
         .exam-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -500,7 +496,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
             gap: 0.375rem;
         }
         
-        /* Pagination */
+       
         .pagination {
             display: flex;
             justify-content: center;
@@ -553,7 +549,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
                 <div class="user-avatar"><?php echo strtoupper(substr($_SESSION['nama_lengkap'], 0, 1)); ?></div>
                 <div class="user-details">
                     <h4><?php echo $_SESSION['nama_lengkap']; ?></h4>
-                    <!-- <p><?php echo htmlspecialchars($nama_kelas_display); ?></p> -->
+                    <?php echo htmlspecialchars($nama_kelas_display); ?></p>
                 </div>
             </div>
             
@@ -669,7 +665,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
                 <?php endwhile; ?>
             </div>
             
-            <!-- Pagination -->
+       
             <div class="pagination">
                 <button class="page-btn" onclick="changePage(<?php echo $page - 1; ?>)" <?php echo $page <= 1 ? 'disabled' : ''; ?>>←</button>
                 <?php for ($i = 1; $i <= $total_pages; $i++): ?>
@@ -682,7 +678,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
     </div>
     
     <script>
-        // Theme Toggle
+    
         function toggleTheme() {
             const body = document.body;
             const toggle = document.getElementById('themeToggle');
@@ -698,23 +694,23 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
             }
         }
         
-        // Load saved theme
+      
         if (localStorage.getItem('theme') === 'dark') {
             document.body.setAttribute('data-theme', 'dark');
             document.getElementById('themeToggle').classList.add('active');
         }
         
-        // Sidebar Toggle
+       
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('closed');
         }
         
-        // Pagination
+     
         function changePage(page) {
             window.location.href = 'dashboard_siswa.php?page=' + page;
         }
         
-        // Search & Filter
+      
         document.getElementById('searchInput').addEventListener('input', filterExams);
         document.getElementById('sortSelect').addEventListener('change', filterExams);
         document.getElementById('statusSelect').addEventListener('change', filterExams);
@@ -726,14 +722,13 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
             
             const cards = Array.from(document.querySelectorAll('.exam-card'));
             
-            // Sort
+          
             cards.sort((a, b) => {
                 if (sort === 'name') return a.dataset.name.localeCompare(b.dataset.name);
                 if (sort === 'score') return parseFloat(b.dataset.score) - parseFloat(a.dataset.score);
                 return 0;
             });
             
-            // Filter & Re-append
             const grid = document.getElementById('examGrid');
             cards.forEach(card => {
                 const matchSearch = card.dataset.name.includes(search);
