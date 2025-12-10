@@ -10,6 +10,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'siswa') {
 $user_id = $_SESSION['user_id'];
 $user_kelas = isset($_SESSION['kelas']) ? intval($_SESSION['kelas']) : null;
 
+
 $nama_kelas_display = '—';
 if (!empty($_SESSION['kelas'])) {
     $sess_kelas = $_SESSION['kelas'];
@@ -20,6 +21,7 @@ if (!empty($_SESSION['kelas'])) {
             $nama_kelas_display = $row['nama'];
         }
     } else {
+       
         $nama_kelas_display = $sess_kelas;
     }
 
@@ -28,16 +30,67 @@ if (!empty($_SESSION['kelas'])) {
     }
 }
 
-$stats = [
-    'ujian_selesai' => 3,
-    'rata_rata' => 78.5,
-    'tertinggi' => 95
-];
 
-$ujian_tersedia = 1;
+$candidates = ['kelas', 'kelas_id', 'id_kelas'];
+$found_col = null;
+$found_prefix = null;
 
+
+$res = mysqli_query($conn, "SHOW COLUMNS FROM mata_pelajaran");
+if ($res) {
+    while ($row = mysqli_fetch_assoc($res)) {
+        if (in_array($row['Field'], $candidates)) {
+            $found_col = $row['Field'];
+            $found_prefix = 'mp';
+            break;
+        }
+    }
+}
+
+
+if (!$found_col) {
+    $res2 = mysqli_query($conn, "SHOW COLUMNS FROM ujian");
+    if ($res2) {
+        while ($row = mysqli_fetch_assoc($res2)) {
+            if (in_array($row['Field'], $candidates)) {
+                $found_col = $row['Field'];
+                $found_prefix = 'u';
+                break;
+            }
+        }
+    }
+}
+
+if (is_null($user_kelas) || !$found_col) {
+    $kelas_where = "";
+} else {
+    $kelas_where = " WHERE $found_prefix.$found_col = $user_kelas ";
+}
+
+
+$stats = mysqli_fetch_assoc(mysqli_query($conn, "SELECT 
+    COUNT(DISTINCT ujian_id) as ujian_selesai,
+    IFNULL(AVG(max_skor), 0) as rata_rata,
+    IFNULL(MAX(max_skor), 0) as tertinggi
+FROM (SELECT ujian_id, MAX(skor) as max_skor FROM riwayat_ujian WHERE user_id = $user_id GROUP BY ujian_id) as best"));
+
+$ujian_tersedia = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM ujian u JOIN mata_pelajaran mp ON u.mata_pelajaran_id = mp.id $kelas_where"))['total'];
+
+
+$per_page = 6;
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-$total_pages = 1;
+$offset = ($page - 1) * $per_page;
+
+$total_ujian = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM ujian u JOIN mata_pelajaran mp ON u.mata_pelajaran_id = mp.id $kelas_where"))['total'];
+$total_pages = ceil($total_ujian / $per_page);
+
+$result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.gambar, mp.deskripsi,
+    (SELECT MAX(skor) FROM riwayat_ujian WHERE user_id = $user_id AND ujian_id = u.id) as nilai_terbaik,
+    (SELECT COUNT(*) FROM riwayat_ujian WHERE user_id = $user_id AND ujian_id = u.id) as jumlah_percobaan
+    FROM ujian u 
+    JOIN mata_pelajaran mp ON u.mata_pelajaran_id = mp.id
+    $kelas_where
+    LIMIT $per_page OFFSET $offset");
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -93,6 +146,7 @@ $total_pages = 1;
         
         .layout { display: flex; min-height: 100vh; }
         
+      
         .sidebar {
             width: 280px;
             background: var(--bg-secondary);
@@ -191,6 +245,7 @@ $total_pages = 1;
         .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
         .nav-item.active { background: var(--gradient); color: #fff; }
         
+       
         .theme-toggle {
             display: flex;
             align-items: center;
@@ -231,6 +286,7 @@ $total_pages = 1;
         
         .toggle-switch.active::after { transform: translateX(24px); }
         
+     
         .main {
             flex: 1;
             margin-left: 280px;
@@ -240,10 +296,10 @@ $total_pages = 1;
         
         .sidebar.closed ~ .main { margin-left: 0; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-left : 15px}
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
         .header h1 { font-size: 1.75rem; font-weight: 800; }
         .header p { color: var(--text-secondary); margin-top: 0.25rem; }
-        
+      
         .stats-section {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -295,6 +351,7 @@ $total_pages = 1;
         .stat-value { font-size: 1.75rem; font-weight: 800; margin-bottom: 0.25rem; }
         .stat-label { font-size: 0.8rem; color: var(--text-secondary); }
         
+      
         .filter-section {
             display: flex;
             align-items: center;
@@ -335,6 +392,7 @@ $total_pages = 1;
         
         .filter-select:focus { outline: none; border-color: var(--accent); }
         
+       
         .exam-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -438,6 +496,7 @@ $total_pages = 1;
             gap: 0.375rem;
         }
         
+       
         .pagination {
             display: flex;
             justify-content: center;
@@ -483,14 +542,14 @@ $total_pages = 1;
         <aside class="sidebar" id="sidebar">
             <div class="logo">
                 <div class="logo-icon">📚</div>
-                <span class="logo-text">Examify</span>
+                <span class="logo-text">ExamHub</span>
             </div>
             
             <div class="user-card">
                 <div class="user-avatar"><?php echo strtoupper(substr($_SESSION['nama_lengkap'], 0, 1)); ?></div>
                 <div class="user-details">
                     <h4><?php echo $_SESSION['nama_lengkap']; ?></h4>
-                    <p><?php echo htmlspecialchars($nama_kelas_display); ?></p>
+                    <?php echo htmlspecialchars($nama_kelas_display); ?></p>
                 </div>
             </div>
             
@@ -499,6 +558,7 @@ $total_pages = 1;
                 <a href="dashboard_siswa.php" class="nav-item active"><span>◉</span> Dashboard</a>
                 <a href="riwayat_siswa.php" class="nav-item"><span>◫</span> Riwayat Ujian</a>
                 <div class="nav-label" style="margin-top: 1.5rem;">Lainnya</div>
+                <a href="profile.php" class="nav-item"><span>👤</span> Profile</a>
                 <a href="logout.php" class="nav-item"><span>↪</span> Keluar</a>
             </nav>
             
@@ -559,48 +619,66 @@ $total_pages = 1;
             </div>
             
             <div class="exam-grid" id="examGrid">
+                <?php while ($ujian = mysqli_fetch_assoc($result_ujian)): 
+                    $score = $ujian['nilai_terbaik'] ?? 0;
+                    $isDone = $ujian['nilai_terbaik'] !== null;
+                ?>
                 <div class="exam-card" 
-                     data-name="matematika ujian tengah semester matematika"
-                     data-score="82"
-                     data-status="done"
-                     onclick="window.location.href='mulai_ujian.php?ujian_id=1'">
+                     data-name="<?php echo strtolower($ujian['mata_pelajaran'] . ' ' . $ujian['judul']); ?>"
+                     data-score="<?php echo $score; ?>"
+                     data-status="<?php echo $isDone ? 'done' : 'new'; ?>"
+                     onclick="window.location.href='mulai_ujian.php?ujian_id=<?php echo $ujian['id']; ?>'">
                     <div class="card-image">
-                       
-                        <span class="card-badge">Matematika</span>
+                        <img src="images/<?php echo $ujian['gambar']; ?>" alt="<?php echo $ujian['mata_pelajaran']; ?>">
+                        <span class="card-badge"><?php echo $ujian['mata_pelajaran']; ?></span>
                     </div>
                     <div class="card-body">
-                        <h3 class="card-title">Ujian Tengah Semester Matematika</h3>
-                        <p class="card-desc">Ujian .</p>
+                        <h3 class="card-title"><?php echo $ujian['judul']; ?></h3>
+                        <?php if (!empty($ujian['deskripsi'])): ?>
+                            <p class="card-desc"><?php echo $ujian['deskripsi']; ?></p>
+                        <?php endif; ?>
                         <div class="card-meta">
-                            <div class="meta-item"><span>📝</span> 25 Soal</div>
-                            <div class="meta-item"><span>⏱️</span> 90 Menit</div>
+                            <div class="meta-item"><span>📝</span> <?php echo $ujian['jumlah_soal']; ?> Soal</div>
+                            <div class="meta-item"><span>⏱️</span> <?php echo $ujian['waktu_pengerjaan']; ?> Menit</div>
                         </div>
-                        <div class="card-footer">
-                            <div class="score-display">
-                                <div class="score-ring" style="--score: 82">
-                                    <span>82</span>
+                        
+                        <?php if ($isDone): ?>
+                            <div class="card-footer">
+                                <div class="score-display">
+                                    <div class="score-ring" style="--score: <?php echo $score; ?>">
+                                        <span><?php echo number_format($score, 0); ?></span>
+                                    </div>
+                                    <div class="score-info">
+                                        <div class="label">Nilai Terbaik</div>
+                                        <div class="value">Personal Best</div>
+                                    </div>
                                 </div>
-                                <div class="score-info">
-                                    <div class="label">Nilai Terbaik</div>
-                                    <div class="value">Personal Best</div>
-                                </div>
+                                <div class="attempts-badge"><?php echo $ujian['jumlah_percobaan']; ?>x</div>
                             </div>
-                            <div class="attempts-badge">2x</div>
-                        </div>
+                        <?php else: ?>
+                            <div class="card-footer">
+                                <div class="start-btn"><span>▶</span> Mulai Ujian</div>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
+                <?php endwhile; ?>
             </div>
             
+       
             <div class="pagination">
-                <button class="page-btn" onclick="changePage(1)" disabled>←</button>
-                <button class="page-btn active" onclick="changePage(1)">1</button>
-                <button class="page-btn" onclick="changePage(2)" disabled>→</button>
-                <span class="page-info">Halaman 1 dari 1</span>
+                <button class="page-btn" onclick="changePage(<?php echo $page - 1; ?>)" <?php echo $page <= 1 ? 'disabled' : ''; ?>>←</button>
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <button class="page-btn <?php echo $i == $page ? 'active' : ''; ?>" onclick="changePage(<?php echo $i; ?>)"><?php echo $i; ?></button>
+                <?php endfor; ?>
+                <button class="page-btn" onclick="changePage(<?php echo $page + 1; ?>)" <?php echo $page >= $total_pages ? 'disabled' : ''; ?>>→</button>
+                <span class="page-info">Halaman <?php echo $page; ?> dari <?php echo $total_pages; ?></span>
             </div>
         </main>
     </div>
     
     <script>
+    
         function toggleTheme() {
             const body = document.body;
             const toggle = document.getElementById('themeToggle');
@@ -616,19 +694,23 @@ $total_pages = 1;
             }
         }
         
+      
         if (localStorage.getItem('theme') === 'dark') {
             document.body.setAttribute('data-theme', 'dark');
             document.getElementById('themeToggle').classList.add('active');
         }
         
+       
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('closed');
         }
         
+     
         function changePage(page) {
             window.location.href = 'dashboard_siswa.php?page=' + page;
         }
         
+      
         document.getElementById('searchInput').addEventListener('input', filterExams);
         document.getElementById('sortSelect').addEventListener('change', filterExams);
         document.getElementById('statusSelect').addEventListener('change', filterExams);
@@ -640,6 +722,7 @@ $total_pages = 1;
             
             const cards = Array.from(document.querySelectorAll('.exam-card'));
             
+          
             cards.sort((a, b) => {
                 if (sort === 'name') return a.dataset.name.localeCompare(b.dataset.name);
                 if (sort === 'score') return parseFloat(b.dataset.score) - parseFloat(a.dataset.score);
