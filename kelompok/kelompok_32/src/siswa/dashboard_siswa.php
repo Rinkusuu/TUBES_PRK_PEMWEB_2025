@@ -629,7 +629,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
                      data-status="<?php echo $isDone ? 'done' : 'new'; ?>"
                      onclick="window.location.href='mulai_ujian.php?ujian_id=<?php echo $ujian['id']; ?>'">
                     <div class="card-image">
-                        <img src="images/<?php echo $ujian['gambar']; ?>" alt="<?php echo $ujian['mata_pelajaran']; ?>">
+                        <img src="../images/<?php echo $ujian['gambar']; ?>" alt="<?php echo $ujian['mata_pelajaran']; ?>">
                         <span class="card-badge"><?php echo $ujian['mata_pelajaran']; ?></span>
                     </div>
                     <div class="card-body">
