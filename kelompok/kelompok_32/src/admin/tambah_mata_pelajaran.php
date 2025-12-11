@@ -211,7 +211,7 @@ if (isset($_POST['submit'])) {
         <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
         <div class="sidebar-header">
-            <h3>Ujian Online</h3>
+            <h3>Examify</h3>
             <p>Admin: <?= $_SESSION['nama_lengkap'] ?? '' ?></p>
         </div>
 

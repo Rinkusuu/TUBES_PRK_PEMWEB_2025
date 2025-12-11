@@ -542,7 +542,7 @@ $result_ujian = mysqli_query($conn, "SELECT u.*, mp.nama as mata_pelajaran, mp.g
         <aside class="sidebar" id="sidebar">
             <div class="logo">
                 <div class="logo-icon">📚</div>
-                <span class="logo-text">ExamHub</span>
+                <span class="logo-text">Examify</span>
             </div>
             
             <div class="user-card">
