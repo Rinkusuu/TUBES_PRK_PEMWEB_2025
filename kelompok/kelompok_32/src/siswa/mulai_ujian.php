@@ -524,7 +524,7 @@ $riwayat = mysqli_fetch_assoc($result_riwayat);
             <div class="main-content">
                 <div class="hero-card">
                     <div class="hero-image">
-                        <img src="images/<?php echo $ujian['gambar']; ?>" alt="<?php echo $ujian['mata_pelajaran']; ?>">
+                        <img src="../images/<?php echo $ujian['gambar']; ?>" alt="<?php echo $ujian['mata_pelajaran']; ?>">
                         <span class="hero-badge"><?php echo $ujian['mata_pelajaran']; ?></span>
                     </div>
                     <div class="hero-body">

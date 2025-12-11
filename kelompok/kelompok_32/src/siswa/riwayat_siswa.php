@@ -593,7 +593,7 @@ if (!empty($_SESSION['kelas'])) {
         <aside class="sidebar" id="sidebar">
             <div class="logo">
                 <div class="logo-icon">📚</div>
-                <span class="logo-text">Uian Online</span>
+                <span class="logo-text">Examify</span>
             </div>
             
             <div class="user-card">
